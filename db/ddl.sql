@@ -21,7 +21,7 @@ CREATE TABLE diplomas(
     curso VARCHAR(255) NOT NULL,
     carga_horaria INTEGER NOT NULL,
     fk_aluno INTEGER NOT NULL REFERENCES alunos(id),
-    fk_assinaturas INTEGER NOT NULL REFERENCES assinaturas(id),
+    fk_assinatura INTEGER NOT NULL REFERENCES assinaturas(id),
     data_emissao DATE NOT NULL DEFAULT CURRENT_DATE,
     pdf_url VARCHAR(255)
 );
