@@ -4,8 +4,8 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_USER: diplomas_user
-      POSTGRES_PASSWORD: diplomas_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: diplomas_db
     ports:
       - "5432:5432"
