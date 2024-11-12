@@ -45,7 +45,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://diplomas_user:diplomas_password@postgres:5432/diplomas_db
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/diplomas_db
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_URL=amqp://admin:admin_password@rabbitmq:5672
       - MINIO_URL=minio:9000
