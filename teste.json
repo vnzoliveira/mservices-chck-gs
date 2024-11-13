@@ -1,0 +1,16 @@
+{
+    "data_conclusao": "2024-11-13",
+    "curso": "CCOMP",
+    "carga_horaria": 20,
+    "aluno": {
+      "nome": "Vinicius Oliveira",
+      "nacionalidade": "Brasileiro",
+      "estado": "SP",
+      "data_nascimento": "2024-11-13",
+      "documento": "52576967940"
+    },
+    "assinatura": {
+      "nome_assinatura": "Dr.PHD Paulo Silveira",
+      "cargo": "Reitor Líder de TI"
+    }
+  }

@@ -1,0 +1,111 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: diplomas_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - diploma_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    command: ["redis-server", "--requirepass","admin_password"]
+    ports:
+      - "6379:6379"
+    networks:
+      - diploma_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # AMQP protocol port
+      - "15672:15672"  # Management interface port
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin_password
+    networks:
+      - diploma_network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_password
+    command: server --console-address ":9001" /data
+    volumes:
+      - minio_data:/data
+    networks:
+      - diploma_network
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/diplomas_db
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://admin:admin_password@rabbitmq:5672/
+      - MINIO_URL=minio:9000
+      - MINIO_ACCESS_KEY=minio_admin
+      - MINIO_SECRET_KEY=minio_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - diploma_network
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/diplomas_db
+      - RABBITMQ_URL=amqp://admin:admin_password@rabbitmq:5672/
+      - MINIO_URL=minio:9000
+      - MINIO_ACCESS_KEY=minio_admin
+      - MINIO_SECRET_KEY=minio_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - diploma_network
+
+networks:
+  diploma_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
