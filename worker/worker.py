@@ -39,7 +39,7 @@ async def process_diploma(message):
         data = json.loads(message.body.decode())
         diploma_id = data['diploma_id']
         
-        logger.info(f"Processando diploma... ID: "{diploma_id})
+        logger.info(f"Processando diploma... ID: {diploma_id}")
         
         conn = await asyncpg.connect('postgres://postgres:postgres@postgres:5432/diplomas_db')
         
