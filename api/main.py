@@ -5,6 +5,7 @@ import aioredis
 import aio_pika
 import aysncpg
 import json
+from typing import Optional
 
 app = FastAPI()
 
@@ -25,31 +26,48 @@ class DiplomaRequest(BaseModel):
     carga_horaria : int
     aluno : AlunoBase
     assinatura : AssinaturaBase
+
+class DiplomaResponse(BaseModel):
+    id: int
+    data_conclusao: date
+    curso: str
+    carga_horaria: int
+    status: Optional[str]
+    pdf_url: Optional[str]
+    data_emissao: date
+    nome: str
+    nacionalidade: str
+    estado: str
+    data_nascimento: date
+    documento: str
+    nome_assinatura: str
+    cargo: str
+    
+async def get_redis_pool():
+    return await aioredis.from_url('redis://redis:6379', encoding='utf-8', decode_responses=True)
     
 async def get_cache(key : str):
-    redis = await aioredis.create_redis_pool('redis://redis:6379')
+    redis = await get_redis_pool()
     try:
         cached_data = await redis.get(key)
         return cached_data
     finally:
-        redis.close()
-        await redis.wait_closed()
+        await redis.close()
 
 async def set_cache(key : str, value : str, expire : int = 3600):
-    redis = await aioredis.create_redis_pool('redis://redis:6379')
+    redis = get_redis_pool()
     try:
-        await redis.set(key, value, expire=expire)
+        await redis.set(key, value, ex=expire)
     finally:
-        redis.close()
-        redis.wait_closed()
+        await redis.close()
 
 
-@app.post("/diplomas")
+@app.post("/diplomas", response_model=dict)
 async def cria_diploma(diploma : DiplomaRequest):
     conn = await aysncpg.connect('postgresql://postgres:postgres@postgres:5432/diplomas_db')
     try:
         async with conn.transaction():
-            aluno = """
+            aluno_query = """
             INSERT INTO alunos(nome, nacionalidade, estado, data_nascimento, documento)
             VALUES($1, $2, $3, $4, $5)
             ON CONFLICT (documento) DO UPDATE
@@ -60,7 +78,7 @@ async def cria_diploma(diploma : DiplomaRequest):
             RETURNING id
             """
             aluno_id = await conn.fetchval(
-                aluno,
+                aluno_query,    
                 diploma.aluno.nome,
                 diploma.aluno.nacionalidade,
                 diploma.aluno.estado,
@@ -68,7 +86,7 @@ async def cria_diploma(diploma : DiplomaRequest):
                 diploma.aluno.documento
             )
             
-            assinatura = """
+            assinatura_query = """
                 INSERT INTO assinaturas (nome_assinatura, cargo)
                 VALUES ($1, $2)
                 ON CONFLICT (nome_assinatura, cargo) DO UPDATE
@@ -78,7 +96,7 @@ async def cria_diploma(diploma : DiplomaRequest):
             """
             
             assinatura_id = await conn.fetchval(
-                assinatura,
+                assinatura_query,
                 diploma.assinatura.nome_assinatura,
                 diploma.assinatura.cargo
             )
@@ -86,8 +104,8 @@ async def cria_diploma(diploma : DiplomaRequest):
             diploma_query = """
                 INSERT INTO diplomas (
                     data_conclusao, curso, carga_horaria,
-                    fk_aluno, fk_assinatura
-                ) VALUES ($1, $2, $3, $4, $5)
+                    fk_aluno, fk_assinatura, status
+                ) VALUES ($1, $2, $3, $4, $5, 'pending')
                 RETURNING id
             """
             
@@ -101,26 +119,27 @@ async def cria_diploma(diploma : DiplomaRequest):
             )
             
             connection = await aio_pika.connect_robust("amqp://admin:admin_password@rabbitmq:5672/")
-            canal = await connection.channel()
-            fila = await canal.declare_queue("diploma_generation")
+            try:   
+                canal = await connection.channel()
+                fila = await canal.declare_queue("diploma_generation")
             
-            message = {
-                "diploma_id": diploma_id,
-                **diploma.dict()
-            }
-            
-            await canal.default_exchange.publish(
-                aio_pika.Message(body=json.dumps(message).encode()),
-                routing_key="diploma_generation"
-            )
-            
-            await connection.close()
+                message = {
+                    "diploma_id": diploma_id,
+                    **diploma.dict()
+                }
+                
+                await canal.default_exchange.publish(
+                    aio_pika.Message(body=json.dumps(message).encode()),
+                    routing_key="diploma_generation"
+                )
+            finally:
+                await connection.close()
             
             return {"diploma_id":diploma_id}
     finally:
         await conn.close()
 
-@app.get("/diplomas/{diploma_id}")
+@app.get("/diplomas/{diploma_id}", response_model=DiplomaResponse)
 async def get_diploma(diploma_id : int):
     cached_data = await get_cache(f"diploma:{diploma_id}")
     if cached_data:
