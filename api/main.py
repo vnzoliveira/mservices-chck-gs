@@ -5,7 +5,10 @@ from redis.asyncio import Redis
 import aio_pika
 import asyncpg
 import json
+import os 
 from typing import Optional
+
+RABBITMQ_URL = os.environ.get('RABBITMQ_URL', 'amqp://admin:admin_password@rabbitmq:5672/')
 
 app = FastAPI()
 
@@ -44,7 +47,7 @@ class DiplomaResponse(BaseModel):
     cargo: str
     
 async def get_redis_pool():
-    return await Redis(host='redis', port=6379, require_pass='admin_password', decode_responses=True)
+    return Redis(host='redis', port=6379, password='admin_password', decode_responses=True)
     
 async def get_cache(key : str):
     redis = await get_redis_pool()
@@ -55,7 +58,7 @@ async def get_cache(key : str):
         await redis.close()
 
 async def set_cache(key : str, value : str, expire : int = 3600):
-    redis = get_redis_pool()
+    redis = await get_redis_pool()
     try:
         await redis.set(key, value, ex=expire)
     finally:
@@ -110,18 +113,18 @@ async def cria_diploma(diploma : DiplomaRequest):
                 assinatura_id
             )
             
-            connection = await aio_pika.connect_robust("amqp://admin:admin_password@rabbitmq:5672/")
+            connection = await aio_pika.connect_robust(RABBITMQ_URL)
             try:   
                 canal = await connection.channel()
                 fila = await canal.declare_queue("diploma_generation")
             
                 message = {
                     "diploma_id": diploma_id,
-                    **diploma.dict()
+                    **diploma.model_dump(mode='json')
                 }
                 
                 await canal.default_exchange.publish(
-                    aio_pika.Message(body=json.dumps(message).encode()),
+                    aio_pika.Message(body=json.dumps(message, default=str).encode()),
                     routing_key="diploma_generation"
                 )
             finally:
@@ -137,7 +140,7 @@ async def get_diploma(diploma_id : int):
     if cached_data:
         return json.loads(cached_data)
     
-    conn = await asyncpg.connect('postgresql://postgres:postgres@:5432/diplomas_db')
+    conn = await asyncpg.connect('postgresql://postgres:postgres@postgres:5432/diplomas_db')
     try:
         query = """
              SELECT 
@@ -166,7 +169,7 @@ async def get_diploma(diploma_id : int):
             raise HTTPException(status_code = 404, detail="Diploma nao encontrado.")
         
         result = dict(record)
-        await set_cache(f"diploma:{diploma_id}", json.dumps(result))
+        await set_cache(f"diploma:{diploma_id}", json.dumps(result, default=str))
         
         return result
     finally:

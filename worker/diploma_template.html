@@ -28,7 +28,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: 1000px;
         }
         
         .diploma-container {
@@ -85,18 +85,18 @@
         <div class="sub-header">Certificado de Conclusão</div>
         <div class="content">
             <p>
-                Certificamos que <strong>[[nome]]</strong>, [[nacionalidade]], natural do Estado de [[estado]], nascido em [[data_nascimento]], RG [[documento]], concluiu em [[data_conclusao]] o curso de [[curso]], nível de especialização, com carga horária de [[carga_horaria]] horas.
+                Certificamos que <strong>{{nome}}</strong>, {{nacionalidade}}, natural do Estado de {{estado}}, nascido em {{data_nascimento}}, RG {{documento}}, concluiu em {{data_conclusao}} o curso de {{curso}}, nível de especialização, com carga horária de {{carga_horaria}} horas.
             </p>
             <p>
                 Este certificado é concedido em conformidade com o artigo 44, inciso 3353, da Lei 9394/96, e com a Resolução 
                 C.N.C./C.C.S. nº 01/07.
             </p>
         </div>
-        <div class="date">São Paulo, [[data_emissao]]</div>
+        <div class="date">São Paulo, {{data_emissao}}</div>
         <div class="signatures">
             <div class="signature">
-                <p><strong>[[nome_assinatura]]</strong></p>
-                <p>[[cargo]]</p>
+                <p><strong>{{nome_assinatura}}</strong></p>
+                <p>{{cargo}}</p>
             </div>            
         </div>
     </div>

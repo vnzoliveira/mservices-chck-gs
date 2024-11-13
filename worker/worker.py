@@ -66,12 +66,7 @@ async def process_diploma(message):
             pdf = {
                 'page-size' : 'A4',
                 'orientation' : 'Landscape',
-                'margin-top' : '0',
-                'margin-right': '0',
-                'margin-bottom': '0',
-                'margin-left': '0',
-                'encoding': 'UTF-8',
-                'no-outline' : None
+                'encoding': 'UTF-8'
             }
             
             path = f"/tmp/diploma_{diploma_id}.pdf"
@@ -121,17 +116,11 @@ async def process_diploma(message):
 async def main():
     while True:
         try:        
-            connection = await aio_pika.connect_robust(os.environ['RABBITMQ_URL'])
-            async with connection:    
-                canal = await connection.channel()
-                fila = await canal.declare_queue("diploma_generation")
-            
-            async with fila.iterator() as fila_iterator:
-                logger.info("Worker iniciado. Aguardando mensagens.")
-                
-                async for message in fila_iterator:
-                    async with message.process():
-                        await process_diploma(message)
+            connection = await aio_pika.connect_robust(os.environ['RABBITMQ_URL'])    
+            canal = await connection.channel()
+            fila = await canal.declare_queue("diploma_generation")
+            await fila.consume(process_diploma, no_ack=False)
+            await asyncio.Future()
         except Exception as e:
             logger.error(f"Erro de conexao: {str(e)}")
             await asyncio.sleep(5)

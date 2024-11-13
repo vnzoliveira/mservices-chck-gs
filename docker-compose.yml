@@ -21,6 +21,7 @@ services:
 
   redis:
     image: redis:latest
+    command: ["redis-server", "--requirepass","admin_password"]
     ports:
       - "6379:6379"
     networks:
