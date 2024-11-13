@@ -9,6 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - ./db/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
       - postgres_data:/var/lib/postgresql/data
     networks:
       - diploma_network

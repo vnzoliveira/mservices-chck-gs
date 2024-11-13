@@ -1,6 +1,4 @@
-CREATE DATABASE diplomas_db;
-
-CREATE TABLE alunos(
+CREATE TABLE IF NOT EXISTS alunos(
     id SERIAL PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     nacionalidade VARCHAR(100) NOT NULL,
@@ -9,13 +7,13 @@ CREATE TABLE alunos(
     documento VARCHAR(20) NOT NULL
 );
 
-CREATE TABLE assinaturas(
+CREATE TABLE IF NOT EXISTS assinaturas(
     id SERIAL PRIMARY KEY,
     nome_assinatura VARCHAR(255) NOT NULL,
     cargo VARCHAR(100) NOT NULL 
 );
 
-CREATE TABLE diplomas(
+CREATE TABLE IF NOT EXISTS diplomas(
     id SERIAL PRIMARY KEY,
     data_conclusao DATE NOT NULL,
     curso VARCHAR(255) NOT NULL,

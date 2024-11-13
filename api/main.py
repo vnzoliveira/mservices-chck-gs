@@ -44,7 +44,7 @@ class DiplomaResponse(BaseModel):
     cargo: str
     
 async def get_redis_pool():
-    return await Redis(host='redis', port=6379, decode_responses=True)
+    return await Redis(host='redis', port=6379, require_pass='admin_password', decode_responses=True)
     
 async def get_cache(key : str):
     redis = await get_redis_pool()
@@ -64,17 +64,12 @@ async def set_cache(key : str, value : str, expire : int = 3600):
 
 @app.post("/diplomas", response_model=dict)
 async def cria_diploma(diploma : DiplomaRequest):
-    conn = await aysncpg.connect('postgresql://postgres:postgres@postgres:5432/diplomas_db')
+    conn = await asyncpg.connect('postgresql://postgres:postgres@postgres:5432/diplomas_db')
     try:
         async with conn.transaction():
             aluno_query = """
             INSERT INTO alunos(nome, nacionalidade, estado, data_nascimento, documento)
             VALUES($1, $2, $3, $4, $5)
-            ON CONFLICT (documento) DO UPDATE
-            SET nome = EXCLUDED.nome,
-            nacionalidade = EXCLUDED.nacionalidade,
-            estado = EXCLUDED.estado,
-            data_nascimento = EXCLUDED.data_nascimento
             RETURNING id
             """
             aluno_id = await conn.fetchval(
@@ -89,9 +84,6 @@ async def cria_diploma(diploma : DiplomaRequest):
             assinatura_query = """
                 INSERT INTO assinaturas (nome_assinatura, cargo)
                 VALUES ($1, $2)
-                ON CONFLICT (nome_assinatura, cargo) DO UPDATE
-                SET nome_assinatura = EXCLUDED.nome_assinatura,
-                    cargo = EXCLUDED.cargo
                 RETURNING id
             """
             
