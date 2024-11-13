@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import date
-import aioredis
+from redis.asyncio import Redis
 import aio_pika
-import aysncpg
+import asyncpg
 import json
 from typing import Optional
 
@@ -44,7 +44,7 @@ class DiplomaResponse(BaseModel):
     cargo: str
     
 async def get_redis_pool():
-    return await aioredis.from_url('redis://redis:6379', encoding='utf-8', decode_responses=True)
+    return await Redis(host='redis', port=6379, decode_responses=True)
     
 async def get_cache(key : str):
     redis = await get_redis_pool()

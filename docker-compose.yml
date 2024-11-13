@@ -12,6 +12,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - diploma_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:latest
@@ -30,6 +35,11 @@ services:
       RABBITMQ_DEFAULT_PASS: admin_password
     networks:
       - diploma_network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   minio:
     image: minio/minio
@@ -59,10 +69,14 @@ services:
       - MINIO_ACCESS_KEY=minio_admin
       - MINIO_SECRET_KEY=minio_password
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - diploma_network
 
@@ -77,9 +91,12 @@ services:
       - MINIO_ACCESS_KEY=minio_admin
       - MINIO_SECRET_KEY=minio_password
     depends_on:
-      - postgres
-      - rabbitmq
-      - minio
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - diploma_network
 
